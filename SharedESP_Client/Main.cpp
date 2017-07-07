@@ -6,7 +6,7 @@ void Initialize()
 
 
 	// Hook CSGO drawing functions
-
+	CSGO::InitializeSDK();
 
 	// Spawn update thread to send/recv data
 	//CreateThread(0, 0, (LPTHREAD_START_ROUTINE)SyncData::g_DataManager->UpdateThread, 0, 0, 0);

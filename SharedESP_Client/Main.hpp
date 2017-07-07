@@ -11,5 +11,6 @@
 
 #include "VMTHooking.h"
 #include "CSGO_SDK.hpp"
+#include "NetvarManager.hpp"
 #include "CSGO_ESP.hpp"
 #include "SyncData.hpp"
