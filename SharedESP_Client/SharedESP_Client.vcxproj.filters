@@ -9,6 +9,7 @@
     <ClCompile Include="NetvarManager.cpp">
       <Filter>CSGO Stuff\Valve SDK</Filter>
     </ClCompile>
+    <ClCompile Include="CSGO_ESP.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SyncData.hpp" />

@@ -7,15 +7,15 @@ void Initialize()
 
 	// Hook CSGO drawing functions
 	CSGO::InitializeSDK();
+	CSGO::PlaceHooks();
 
 	// Spawn update thread to send/recv data
-	//CreateThread(0, 0, (LPTHREAD_START_ROUTINE)SyncData::g_DataManager->UpdateThread, 0, 0, 0);
 	SyncData::g_DataManager = std::make_unique<SyncData::CDataManager>();
 }
 
 void CleanUp()
 {
-
+	CSGO::RemoveHooks();
 }
 
 int __stdcall DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)

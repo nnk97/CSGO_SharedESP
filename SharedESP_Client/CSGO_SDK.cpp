@@ -68,7 +68,7 @@ namespace CSGO
 	void PlaceHooks()
 	{
 		g_pPanelHook = std::make_unique<CVMTHookManager>((PDWORD*)g_pPanel);
-		g_pPanelHook->dwHookMethod(NULL/*painttraverse*/, 41);
+		ESP::orgPaintTraverse = (ESP::PaintTraverseFn)g_pPanelHook->dwHookMethod((DWORD)ESP::hkPaintTraverse, 41);
 	}
 
 	void RemoveHooks()

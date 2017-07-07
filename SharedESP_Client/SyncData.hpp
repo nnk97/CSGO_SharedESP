@@ -18,6 +18,10 @@ namespace SyncData
 	private:
 		std::mutex m_Mutex;
 		PlayerData m_Data[65];
+		void ResetData();
+
+		void UpdateThread();
+		std::thread m_Thread;
 
 	public:
 		void GetLastRecord(int i, PlayerData& pData);
