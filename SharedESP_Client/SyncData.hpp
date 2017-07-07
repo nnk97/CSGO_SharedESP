@@ -18,12 +18,13 @@ namespace SyncData
 	private:
 		std::mutex m_Mutex;
 		PlayerData m_Data[65];
-		void ResetData();
-
-		void UpdateThread();
 		std::thread m_Thread;
+		void ResetData();
+		void UpdateThread();
+		bool m_bConnected = false;
 
 	public:
+		bool IsConnected() { return m_bConnected; }
 		void GetLastRecord(int i, PlayerData& pData);
 
 	private:

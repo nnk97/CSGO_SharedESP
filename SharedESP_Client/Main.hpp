@@ -8,6 +8,8 @@
 #include "boost/asio.hpp"
 
 #include <Windows.h>
+#include <Psapi.h>
+#pragma comment(lib, "psapi.lib")
 
 #include "VMTHooking.h"
 #include "CSGO_SDK.hpp"

@@ -3,13 +3,19 @@
 namespace CSGO
 {
 	std::unique_ptr<NetvarOffsets> g_pOffsets = nullptr;
+	std::unique_ptr<CServerIPFinder> g_pServerIP = nullptr;
 
 	CHLCLient* g_pClient = nullptr;
 	CSurface* g_pSurface = nullptr;
 	CEntityList* g_pEntityList = nullptr;
 	CVarInterface* g_pCVar = nullptr;
 	CEngine* g_pEngine = nullptr;
-	PVOID g_pPanel = nullptr;
+	CPanel* g_pPanel = nullptr;
+	
+	DWORD g_hMainFont = NULL;
+
+	typedef void* (__cdecl* CreateInterface_t)(const char*, int*);
+	typedef void* (*CreateInterfaceFn)(const char* pName, int* pReturnCode);
 
 	template<typename Interface>
 	Interface* GetInterface(const char* pszModule, const char* pszInterface)
@@ -33,14 +39,6 @@ namespace CSGO
 		return Outcome;
 	}
 
-	const char* CEntity::GetNickname()
-	{
-		player_info_t pInfo;
-		if (!g_pEngine->GetPlayerInfo(Index(), &pInfo))
-			return nullptr;
-		return pInfo.m_Nickname;
-	}
-
 	void InitializeSDK()
 	{
 		// Grab all the interfaces out of the game
@@ -49,7 +47,8 @@ namespace CSGO
 		g_pSurface = GetInterface<CSurface>("vguimatsurface.dll", "VGUI_Surface");
 		g_pEntityList = GetInterface<CEntityList>("client.dll", "VClientEntityList");//
 		g_pEngine = GetInterface<CEngine>("engine.dll", "VEngineClient");
-		g_pPanel = GetInterface<void>("vgui2.dll", "VGUI_Panel");
+		g_pPanel = GetInterface<CPanel>("vgui2.dll", "VGUI_Panel");
+		//g_pEventManager = GetInterface<CGameEventManager>("engine.dll", "GAMEEVENTSMANAGER");
 
 		// Grab network variables
 		std::unique_ptr<CNetVars> pNVManager = std::make_unique<CNetVars>();
@@ -59,10 +58,16 @@ namespace CSGO
 		g_pOffsets->m_iLifeState = pNVManager->GetOffset("DT_BasePlayer", "m_lifeState");
 		g_pOffsets->m_flSimulationTime = pNVManager->GetOffset("DT_CSPlayer", "m_flSimulationTime");
 		g_pOffsets->m_iTeamNumber = pNVManager->GetOffset("DT_BaseEntity", "m_iTeamNum");
+		g_pOffsets->m_vecViewOffset = pNVManager->GetOffset("DT_BasePlayer", "m_vecViewOffset[0]");
+
+		g_pServerIP = std::make_unique<CServerIPFinder>();
+		
+		g_hMainFont = g_pSurface->CreateHLFont();
 
 		g_pCVar->DbgPrint("  >>>  CSGO_SharedESP SDK loaded!\n");
 	}
-
+	
+	// Hooking VTables
 	std::unique_ptr<CVMTHookManager> g_pPanelHook;
 
 	void PlaceHooks()

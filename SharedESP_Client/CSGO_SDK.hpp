@@ -12,9 +12,6 @@ namespace CSGO
 	template<typename OrgFunc>
 	OrgFunc __forceinline CallVirtual(PVOID pClass, DWORD i) { return (OrgFunc)((*(PDWORD*)pClass)[i]); }
 
-	typedef void* (__cdecl* CreateInterface_t)(const char*, int*);
-	typedef void* (*CreateInterfaceFn)(const char* pName, int* pReturnCode);
-
 	struct NetvarOffsets
 	{
 	public:
@@ -23,6 +20,7 @@ namespace CSGO
 		DWORD m_iTeamNumber;
 		DWORD m_iFlags;
 		DWORD m_iLifeState;
+		DWORD m_vecViewOffset;
 	};
 	extern std::unique_ptr<NetvarOffsets> g_pOffsets;
 
@@ -32,6 +30,8 @@ namespace CSGO
 		int _pad[4];
 	public:
 		char m_Nickname[128];
+	private:
+		char _pad1[0x256];
 	};
 
 	class ClientClass
@@ -65,6 +65,23 @@ namespace CSGO
 		}
 	};
 	extern CHLCLient* g_pClient;
+
+	enum FontFlags_t
+	{
+		FONTFLAG_NONE,
+		FONTFLAG_ITALIC = 0x001,
+		FONTFLAG_UNDERLINE = 0x002,
+		FONTFLAG_STRIKEOUT = 0x004,
+		FONTFLAG_SYMBOL = 0x008,
+		FONTFLAG_ANTIALIAS = 0x010,
+		FONTFLAG_GAUSSIANBLUR = 0x020,
+		FONTFLAG_ROTARY = 0x040,
+		FONTFLAG_DROPSHADOW = 0x080,
+		FONTFLAG_ADDITIVE = 0x100,
+		FONTFLAG_OUTLINE = 0x200,
+		FONTFLAG_CUSTOM = 0x400,		// custom generated font - never fall back to asian compatibility mode
+		FONTFLAG_BITMAP = 0x800,		// compiled bitmap font - no fallbacks
+	};
 
 	class CSurface
 	{
@@ -124,13 +141,14 @@ namespace CSGO
 		}
 	};
 	extern CSurface* g_pSurface;
+	extern DWORD g_hMainFont;
 
 	class CEntity
 	{
 	public:
 		bool IsAlive()
 		{
-			return (*(int*)((uintptr_t)this + g_pOffsets->m_iFlags) == 0);
+			return (*(int*)((uintptr_t)this + g_pOffsets->m_iLifeState) == 0);
 		}
 
 		bool IsDormant()
@@ -156,21 +174,29 @@ namespace CSGO
 			return *(Vector*)((uintptr_t)this + g_pOffsets->m_vecOrigin);
 		}
 
+		Vector GetViewOffset()
+		{
+			return *(Vector*)((uintptr_t)this + g_pOffsets->m_vecViewOffset);
+		}
+
+		int GetTeamID()
+		{
+			return *(int*)((uintptr_t)this + g_pOffsets->m_iTeamNumber);
+		}
+
 		float GetSimulationTime()
 		{
 			return *(float*)((uintptr_t)this + g_pOffsets->m_flSimulationTime);
 		}
-
-		const char* GetNickname();
 	};
 
 	class CEntityList
 	{
 	public:	
-		CEntity* GetEntity(int i)
+		CEntity* GetEntity(int iEntIndex)
 		{
 			typedef CEntity*(__thiscall* OrgFunc)(PVOID, int);
-			return CallVirtual<OrgFunc>(this, 3)(this, i);
+			return CallVirtual<OrgFunc>(this, 3)(this, iEntIndex);
 		}
 	};
 	extern CEntityList* g_pEntityList;
@@ -271,8 +297,55 @@ namespace CSGO
 	};
 	extern CEngine* g_pEngine;
 
-	template<typename Interface>
-	Interface* GetInterface(const char* pszModule, const char* pszInterface);
+	class CServerIPFinder 
+	{
+	public:
+		CServerIPFinder()
+		{
+			DWORD dwServerIPPtr = dwFindPattern(GetModuleHandleA("client.dll"), (PBYTE)"\x6A\x00\x68\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x8B\x74\x24\x1C", "xxx????x????xxxx");
+			if (!dwServerIPPtr)
+				MessageBoxA(NULL, "Failed to signature scan server IP ptr, manual update required!", "Error!", 0);
+			dwServerIPPtr = *(DWORD*)(dwServerIPPtr + 3);
+			m_ptr = (const char*)(dwServerIPPtr + 4);
+		}
+		
+		const char* GetPtr() { return m_ptr; }
+		bool IsLocalHost() { return (stricmp(m_ptr,"loopback:0") == 0); }
+
+	private:
+		const char* m_ptr = nullptr;
+
+		bool bDataCompare(const BYTE *pData, const BYTE *bMask, const char *szMask)
+		{
+			for (; *szMask; ++szMask, ++pData, ++bMask)
+				if (*szMask == 'x' && *pData != *bMask)
+					return false;
+			return (*szMask) == NULL;
+		}
+
+		DWORD dwFindPattern(HMODULE hModule, const BYTE* bMask, char* szMask)
+		{
+			MODULEINFO ModuleInfo;
+			GetModuleInformation(GetCurrentProcess(), hModule, &ModuleInfo, sizeof(MODULEINFO));
+			for (DWORD i = 0; i < ModuleInfo.SizeOfImage; i++)
+				if (bDataCompare((BYTE*)((DWORD)hModule + i), bMask, szMask))
+					return (DWORD)((DWORD)hModule + i);
+			return NULL;
+		}
+
+	};
+	extern std::unique_ptr<CServerIPFinder> g_pServerIP;
+
+	class CPanel
+	{
+	public:
+		const char* GetPanelName(unsigned int iPanel)
+		{
+			typedef const char* (__thiscall* OrgFunc)(PVOID, unsigned int);
+			return CallVirtual<OrgFunc>(this, 36)(this, iPanel);
+		}
+	};
+	extern CPanel* g_pPanel;
 
 	void InitializeSDK();
 

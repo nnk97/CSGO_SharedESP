@@ -13,10 +13,16 @@ namespace SyncData
 
 	void CDataManager::UpdateThread()
 	{
+
 		while (true)
 		{
-
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			try
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			}
+			catch (std::exception ex)
+			{
+			}
 		}
 	}
 
