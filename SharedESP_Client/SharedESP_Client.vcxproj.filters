@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="SyncData.cpp" />
+    <ClCompile Include="CSGO_SDK.cpp">
+      <Filter>CSGO Stuff\Valve SDK</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="SyncData.hpp" />
+    <ClInclude Include="Main.hpp" />
+    <ClInclude Include="VMTHooking.h">
+      <Filter>CSGO Stuff</Filter>
+    </ClInclude>
+    <ClInclude Include="dt_recv2.h">
+      <Filter>CSGO Stuff\Valve SDK</Filter>
+    </ClInclude>
+    <ClInclude Include="dt_common2.h">
+      <Filter>CSGO Stuff\Valve SDK</Filter>
+    </ClInclude>
+    <ClInclude Include="CSGO_SDK.hpp">
+      <Filter>CSGO Stuff\Valve SDK</Filter>
+    </ClInclude>
+    <ClInclude Include="CSGO_ESP.hpp" />
+    <ClInclude Include="Vector.h">
+      <Filter>CSGO Stuff</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CSGO Stuff">
+      <UniqueIdentifier>{837cf5cd-5831-4e63-ab22-a0cb3f7f082d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CSGO Stuff\Valve SDK">
+      <UniqueIdentifier>{06f60e73-ca23-440e-9ef7-f1334199475e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
