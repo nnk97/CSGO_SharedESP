@@ -59,6 +59,22 @@ namespace SyncData
 			}
 		};
 
+		struct PacketHeader_t
+		{
+		public:
+			PacketType m_Type;
+			uint32_t m_ServerHash;
+			uint32_t m_SizeParam;
+
+			template <typename Archive>
+			void serialize(Archive& ar, const unsigned int version)
+			{
+				ar & m_Type;
+				ar & m_ServerHash;
+				ar & m_SizeParam;
+			}
+		};
+
 		struct PlayerData
 		{
 		public:

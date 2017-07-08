@@ -10,6 +10,7 @@
 #include "boost/array.hpp"
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
+#include <boost/crc.hpp>
 
 #include <Windows.h>
 #include <Psapi.h>

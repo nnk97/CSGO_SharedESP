@@ -107,6 +107,7 @@ namespace CSGO
 				if (pEntity->IsDormant())
 				{
 					SyncData::g_DataManager->SetQueryStatus(i, true);
+					SyncData::g_DataManager->SetSendingStatus(i, false);
 				}
 				else
 				{

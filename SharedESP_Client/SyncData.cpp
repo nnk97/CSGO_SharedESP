@@ -33,40 +33,61 @@ namespace SyncData
 		catch (std::exception& e)
 		{
 			std::cerr << e.what() << std::endl;
-			CSGO::g_pCVar->DbgPrint("  >>>  Exception #1: %s\n", e.what());
+			CSGO::g_pCVar->DbgPrint("  >>>  Exception (%s): %s\n", __func__, e.what());
 		}
+	}
+
+	int32_t GetServerCRC32()
+	{
+		const char* str = CSGO::g_pServerIP->GetPtr();
+		if (!str)
+			return 0;
+
+		boost::crc_32_type result;
+		result.process_bytes(str, strlen(str));
+		return result.checksum();
 	}
 
 	void CDataManager::SendData()
 	{
-		// Collect the data to send
-		std::vector<UpdateEntityPacket_t> players_data;
-		
-		for (int i = 1; i < 64; i++)
+		try
 		{
-			PlayerData* pData = &m_Data[i];
-			if (pData->m_ShouldSend)
-				players_data.push_back(pData->ToPacket(i));
+			std::string outbound_data_, outbound_header_;
+			std::ostringstream archive_stream;
+			boost::archive::text_oarchive archive(archive_stream);
+
+			uint32_t iObjectCount = 0;
+			for (int i = 1; i < 64; i++)
+			{
+				auto pData = &m_Data[i];
+				if (pData->m_ShouldSend)
+					iObjectCount++;
+			}
+
+			PacketHeader_t PH;
+			PH.m_Type = PacketType::Update;
+			PH.m_ServerHash = GetServerCRC32();
+			PH.m_SizeParam = iObjectCount;
+			archive << PH;
+
+			for (int i = 1; i < 64; i++)
+			{
+				auto pData = &m_Data[i];
+				if (pData->m_ShouldSend)
+				{
+					archive << pData->ToPacket(i);
+					SetSendingStatus(i, false);
+				}
+			}
+
+			outbound_data_ = archive_stream.str();
+			socket->send_to(boost::asio::buffer(outbound_data_), server_endpoint);
 		}
-
-		std::string outbound_data_, outbound_header_;
-		std::ostringstream archive_stream;
-		boost::archive::text_oarchive archive(archive_stream);
-		archive << (DWORD)NULL; // CRC32 of the server
-		for (int i = 0; i < players_data.size(); i++)
-			archive << players_data[i];
-		outbound_data_ = archive_stream.str();
-
-		// Packet header
-		std::ostringstream header_stream;
-		header_stream << std::setw(4) << std::hex << PacketType::Update;
-		header_stream << std::setw(8) << std::hex << outbound_data_.size();
-		outbound_header_ = header_stream.str();
-
-		std::vector<boost::asio::const_buffer> buffers;
-		buffers.push_back(boost::asio::buffer(outbound_header_));
-		buffers.push_back(boost::asio::buffer(outbound_data_));
-		//socket->send_to(buffers, server_endpoint);
+		catch (std::exception& e)
+		{
+			std::cerr << e.what() << std::endl;
+			CSGO::g_pCVar->DbgPrint("  >>>  Exception (%s): %s\n", __func__, e.what());
+		}
 	}
 
 	void CDataManager::QueryData()
@@ -94,7 +115,7 @@ namespace SyncData
 		catch (std::exception& e)
 		{
 			std::cerr << e.what() << std::endl;
-			CSGO::g_pCVar->DbgPrint("  >>>  Exception #2: %s\n", e.what());
+			CSGO::g_pCVar->DbgPrint("  >>>  Exception (%s): %s\n", __func__, e.what());
 		}
 	}
 
