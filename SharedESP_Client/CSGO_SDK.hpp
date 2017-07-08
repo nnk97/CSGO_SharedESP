@@ -151,6 +151,11 @@ namespace CSGO
 			return (*(int*)((uintptr_t)this + g_pOffsets->m_iLifeState) == 0);
 		}
 
+		bool IsCrouching()
+		{
+			return (*(int*)((uintptr_t)this + g_pOffsets->m_iFlags) & (1 << 1)); // FL_DUCKING
+		}
+
 		bool IsDormant()
 		{
 			PVOID pNetworkable = (PVOID)((DWORD)this + 0x8);

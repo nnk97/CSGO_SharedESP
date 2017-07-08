@@ -80,6 +80,50 @@ namespace CSGO
 		orgShutdown(ecx);
 	}
 
+	typedef void(__thiscall* FrameStageNotifyFn)(PVOID, int);
+	FrameStageNotifyFn orgFrameStageNotify = nullptr;
+	void __fastcall hkFrameStageNotify(void* ecx, void* edx, int iStage)
+	{
+		orgFrameStageNotify(ecx, iStage);
+
+		// On stage: FRAME_NET_UPDATE_POSTDATAUPDATE_END
+		if (iStage == 3)
+		{
+			CEntity* pLocal = g_pEntityList->GetEntity(g_pEngine->GetLocalPlayer());
+			if (!pLocal)
+				return;
+
+			int iLocalTeam = pLocal->GetTeamID();
+
+			for (int i = 1; i < 64; i++)
+			{
+				CEntity* pEntity = g_pEntityList->GetEntity(i);
+				if (!pEntity || pEntity->GetTeamID() == iLocalTeam || !pEntity->IsAlive())
+				{
+					SyncData::g_DataManager->MarkAsInvalidEntity(i);
+					continue;
+				}
+
+				if (pEntity->IsDormant())
+				{
+					SyncData::g_DataManager->SetQueryStatus(i, true);
+				}
+				else
+				{
+					SyncData::CDataManager::PlayerData PD;
+					SyncData::g_DataManager->SetQueryStatus(i, false);
+					SyncData::g_DataManager->GetLastRecord(i, PD);
+
+					// Got new data for the server?
+					if (pEntity->GetSimulationTime() > PD.m_SimulationTime)
+						SyncData::g_DataManager->SetSendingStatus(i, true);
+
+					SyncData::g_DataManager->SetLastRecord(i, pEntity->IsCrouching(), pEntity->GetSimulationTime(), pEntity->GetOrigin());
+				}
+			}
+		}
+	}
+
 	void PlaceHooks()
 	{
 		g_pPanelHook = std::make_unique<CVMTHookManager>((PDWORD*)g_pPanel);
@@ -87,6 +131,7 @@ namespace CSGO
 
 		g_pClientHook = std::make_unique<CVMTHookManager>((PDWORD*)g_pClient);
 		orgShutdown = (ShutdownFn)g_pClientHook->dwHookMethod((DWORD)hkShutdown, 4);
+		orgFrameStageNotify = (FrameStageNotifyFn)g_pClientHook->dwHookMethod((DWORD)hkFrameStageNotify, 36);
 	}
 
 	void RemoveHooks()
