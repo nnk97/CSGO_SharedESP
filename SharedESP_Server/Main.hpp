@@ -12,6 +12,6 @@
 #include "boost/array.hpp"
 #include <boost/bind.hpp>
 #include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 
+#include "DataManager.hpp"
 #include "Server.hpp"

@@ -2,21 +2,21 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="SyncData.cpp" />
     <ClCompile Include="CSGO_SDK.cpp">
       <Filter>CSGO Stuff\Valve SDK</Filter>
     </ClCompile>
     <ClCompile Include="NetvarManager.cpp">
       <Filter>CSGO Stuff\Valve SDK</Filter>
     </ClCompile>
-    <ClCompile Include="CSGO_ESP.cpp" />
+    <ClCompile Include="CSGO_ESP.cpp">
+      <Filter>CSGO Stuff</Filter>
+    </ClCompile>
+    <ClCompile Include="SyncData.cpp">
+      <Filter>Networking</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="SyncData.hpp" />
     <ClInclude Include="Main.hpp" />
-    <ClInclude Include="VMTHooking.h">
-      <Filter>CSGO Stuff</Filter>
-    </ClInclude>
     <ClInclude Include="dt_recv2.h">
       <Filter>CSGO Stuff\Valve SDK</Filter>
     </ClInclude>
@@ -26,12 +26,23 @@
     <ClInclude Include="CSGO_SDK.hpp">
       <Filter>CSGO Stuff\Valve SDK</Filter>
     </ClInclude>
-    <ClInclude Include="CSGO_ESP.hpp" />
-    <ClInclude Include="Vector.h">
-      <Filter>CSGO Stuff</Filter>
-    </ClInclude>
     <ClInclude Include="NetvarManager.hpp">
       <Filter>CSGO Stuff\Valve SDK</Filter>
+    </ClInclude>
+    <ClInclude Include="CSGO_ESP.hpp">
+      <Filter>CSGO Stuff</Filter>
+    </ClInclude>
+    <ClInclude Include="Vector.h">
+      <Filter>CSGO Stuff\Valve SDK</Filter>
+    </ClInclude>
+    <ClInclude Include="VMTHooking.h">
+      <Filter>CSGO Stuff\Valve SDK</Filter>
+    </ClInclude>
+    <ClInclude Include="SyncData.hpp">
+      <Filter>Networking</Filter>
+    </ClInclude>
+    <ClInclude Include="PacketDefinitions.hpp">
+      <Filter>Networking</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -40,6 +51,9 @@
     </Filter>
     <Filter Include="CSGO Stuff\Valve SDK">
       <UniqueIdentifier>{06f60e73-ca23-440e-9ef7-f1334199475e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Networking">
+      <UniqueIdentifier>{faa60e2f-823b-4b21-9403-118d6a4b4a40}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

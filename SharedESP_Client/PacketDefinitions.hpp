@@ -2,7 +2,7 @@
 
 #include <stdint.h>	// For uint16_t
 
-namespace Server
+namespace SyncData
 {
 	enum PacketType : uint16_t
 	{

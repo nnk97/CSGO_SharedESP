@@ -64,9 +64,13 @@ namespace SyncData
 					iObjectCount++;
 			}
 
+			uint32_t ServerHash = GetServerCRC32();
+			if (!iObjectCount || !ServerHash)
+				return;
+
 			PacketHeader_t PH;
 			PH.m_Type = PacketType::Update;
-			PH.m_ServerHash = GetServerCRC32();
+			PH.m_ServerHash = ServerHash;
 			PH.m_SizeParam = iObjectCount;
 			archive << PH;
 

@@ -2,11 +2,40 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="Server.cpp" />
+    <ClCompile Include="Server.cpp">
+      <Filter>Server part</Filter>
+    </ClCompile>
+    <ClCompile Include="DataManager.cpp">
+      <Filter>Data managment part</Filter>
+    </ClCompile>
+    <ClCompile Include="GameServer.cpp">
+      <Filter>Data managment part</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.hpp" />
-    <ClInclude Include="Server.hpp" />
-    <ClInclude Include="PacketDefinitions.hpp" />
+    <ClInclude Include="PacketDefinitions.hpp">
+      <Filter>Server part</Filter>
+    </ClInclude>
+    <ClInclude Include="Server.hpp">
+      <Filter>Server part</Filter>
+    </ClInclude>
+    <ClInclude Include="DataManager.hpp">
+      <Filter>Data managment part</Filter>
+    </ClInclude>
+    <ClInclude Include="GameServer.hpp">
+      <Filter>Data managment part</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerData.hpp">
+      <Filter>Data managment part</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Server part">
+      <UniqueIdentifier>{d05d2cc2-496c-40cb-90d2-508bac84ab42}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data managment part">
+      <UniqueIdentifier>{a6b958d4-e2b3-4485-ac03-522aca6fa6d2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>
