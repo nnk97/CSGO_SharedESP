@@ -45,10 +45,9 @@ namespace CSGO
 		g_pCVar = GetInterface<CVarInterface>("vstdlib.dll", "VEngineCvar");
 		g_pClient = GetInterface<CHLCLient>("client.dll", "VClient");
 		g_pSurface = GetInterface<CSurface>("vguimatsurface.dll", "VGUI_Surface");
-		g_pEntityList = GetInterface<CEntityList>("client.dll", "VClientEntityList");//
+		g_pEntityList = GetInterface<CEntityList>("client.dll", "VClientEntityList");
 		g_pEngine = GetInterface<CEngine>("engine.dll", "VEngineClient");
 		g_pPanel = GetInterface<CPanel>("vgui2.dll", "VGUI_Panel");
-		//g_pEventManager = GetInterface<CGameEventManager>("engine.dll", "GAMEEVENTSMANAGER");
 
 		// Grab network variables
 		std::unique_ptr<CNetVars> pNVManager = std::make_unique<CNetVars>();
@@ -69,15 +68,30 @@ namespace CSGO
 	
 	// Hooking VTables
 	std::unique_ptr<CVMTHookManager> g_pPanelHook;
+	std::unique_ptr<CVMTHookManager> g_pClientHook;
+
+	typedef void(__thiscall* ShutdownFn)(PVOID);
+	ShutdownFn orgShutdown = nullptr;
+	void __fastcall hkShutdown(void* ecx, void* edx)
+	{
+		RemoveHooks();
+		SyncData::g_DataManager->m_bExit = true;
+		SyncData::g_DataManager->m_Thread.detach();
+		orgShutdown(ecx);
+	}
 
 	void PlaceHooks()
 	{
 		g_pPanelHook = std::make_unique<CVMTHookManager>((PDWORD*)g_pPanel);
 		ESP::orgPaintTraverse = (ESP::PaintTraverseFn)g_pPanelHook->dwHookMethod((DWORD)ESP::hkPaintTraverse, 41);
+
+		g_pClientHook = std::make_unique<CVMTHookManager>((PDWORD*)g_pClient);
+		orgShutdown = (ShutdownFn)g_pClientHook->dwHookMethod((DWORD)hkShutdown, 4);
 	}
 
 	void RemoveHooks()
 	{
 		g_pPanelHook->UnHook();
+		g_pClientHook->UnHook();
 	}
 }

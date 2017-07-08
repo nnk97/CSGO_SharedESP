@@ -4,8 +4,10 @@
 
 #include <memory>
 #include <mutex>
+#include <iostream>
 
 #include "boost/asio.hpp"
+#include "boost/array.hpp"
 
 #include <Windows.h>
 #include <Psapi.h>
