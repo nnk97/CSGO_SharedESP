@@ -14,6 +14,8 @@ namespace Data
 	class DataManager
 	{
 	private:
+		const std::chrono::milliseconds death_time_limit = std::chrono::milliseconds(25000);
+
 		std::map<uint32_t, std::shared_ptr<GameServer>> m_Servers;
 		std::shared_ptr<GameServer> FindOrCreateServer(uint32_t ServerHash);
 

@@ -61,7 +61,50 @@ namespace Server
 
 	void SharedESP_Server::HandlePacketQuery(PacketHeader_t& _Header, boost::archive::text_iarchive& data)
 	{
+		std::vector<std::pair<int, Data::PlayerData>> m_ValidTargets;
 
+		for (int i = 0; i < _Header.m_SizeParam; i++)
+		{
+			QueryEntityPacket_t QueryPacket;
+			try
+			{
+				data >> QueryPacket;
+
+				Data::PlayerData PD;
+				Data::Manager->PopData(_Header.m_ServerHash, QueryPacket.m_Index);
+
+				if (PD.m_Simulation > QueryPacket.m_SimulationTime)
+					m_ValidTargets.push_back(std::make_pair(QueryPacket.m_Index, PD));
+			}
+			catch (...)
+			{
+				std::cerr << "Server: Error inside " << __func__ << "!" << std::endl;
+			}
+		}
+
+		// Create & send response for the client
+		try
+		{
+			std::string outbound_data_;
+			std::ostringstream archive_stream;
+			boost::archive::text_oarchive archive(archive_stream);
+
+			PacketHeader_t PH;
+			PH.m_Type = PacketType::Update;
+			PH.m_ServerHash = _Header.m_ServerHash;
+			PH.m_SizeParam = m_ValidTargets.size();
+			archive << PH;
+
+			for (int i = 0; i < PH.m_SizeParam; i++)
+				archive << m_ValidTargets[i].second.ToPacket(m_ValidTargets[i].first);
+
+			outbound_data_ = archive_stream.str();
+			m_socket->send_to(boost::asio::buffer(outbound_data_), m_remote_endpoint);
+		}
+		catch (std::exception& e)
+		{
+			std::cerr << e.what() << std::endl;
+		}
 	}
 
 	void SharedESP_Server::handle_receive(const boost::system::error_code & error, std::size_t bytes_transferred)

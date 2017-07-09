@@ -11,6 +11,7 @@ namespace CSGO
 	CVarInterface* g_pCVar = nullptr;
 	CEngine* g_pEngine = nullptr;
 	CPanel* g_pPanel = nullptr;
+	GlobalVars_t* g_pGlobals = nullptr;
 	
 	DWORD g_hMainFont = NULL;
 
@@ -39,6 +40,33 @@ namespace CSGO
 		return Outcome;
 	}
 
+	bool bDataCompare(const BYTE *pData, const BYTE *bMask, const char *szMask)
+	{
+		for (; *szMask; ++szMask, ++pData, ++bMask)
+			if (*szMask == 'x' && *pData != *bMask)
+				return false;
+		return (*szMask) == NULL;
+	}
+
+	DWORD dwFindPattern(HMODULE hModule, const BYTE* bMask, char* szMask)
+	{
+		MODULEINFO ModuleInfo;
+		GetModuleInformation(GetCurrentProcess(), hModule, &ModuleInfo, sizeof(MODULEINFO));
+		for (DWORD i = 0; i < ModuleInfo.SizeOfImage; i++)
+			if (bDataCompare((BYTE*)((DWORD)hModule + i), bMask, szMask))
+				return (DWORD)((DWORD)hModule + i);
+		return NULL;
+	}
+
+	CServerIPFinder::CServerIPFinder()
+	{
+		DWORD dwServerIPPtr = dwFindPattern(GetModuleHandleA("client.dll"), (PBYTE)"\x6A\x00\x68\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x8B\x74\x24\x1C", "xxx????x????xxxx");
+		if (!dwServerIPPtr)
+			MessageBoxA(NULL, "Failed to signature scan server IP ptr, manual update required!", "Error!", 0);
+		dwServerIPPtr = *(DWORD*)(dwServerIPPtr + 3);
+		m_ptr = (const char*)(dwServerIPPtr + 4);
+	}
+
 	void InitializeSDK()
 	{
 		// Grab all the interfaces out of the game
@@ -48,6 +76,9 @@ namespace CSGO
 		g_pEntityList = GetInterface<CEntityList>("client.dll", "VClientEntityList");
 		g_pEngine = GetInterface<CEngine>("engine.dll", "VEngineClient");
 		g_pPanel = GetInterface<CPanel>("vgui2.dll", "VGUI_Panel");
+
+		DWORD dwGlobalVars = dwFindPattern(GetModuleHandleA("client.dll"), (PBYTE)"\xA1\x00\x00\x00\x00\x8B\x4D\xFC\x8B\x55\x08", "x????xxxxxx");
+		g_pGlobals = (GlobalVars_t*)**(PDWORD**)(dwGlobalVars + 1);
 
 		// Grab network variables
 		std::unique_ptr<CNetVars> pNVManager = std::make_unique<CNetVars>();

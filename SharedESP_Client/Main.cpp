@@ -2,9 +2,6 @@
 
 void Initialize()
 {
-	// Let's try to connec to the server first
-
-
 	// Hook CSGO drawing functions
 	CSGO::InitializeSDK();
 	CSGO::PlaceHooks();

@@ -28,7 +28,7 @@ namespace CSGO
 
 			vecFeet = pEntity->GetOrigin();
 			vecHead = Vector(vecFeet);
-			vecHead.z += 73.f;
+			vecHead.z += pEntity->IsCrouching() ? 54.f : 73.f;
 
 			// Small offset to make boxes a bit biggers
 			vecFeet.z -= 3.25f;
@@ -71,12 +71,66 @@ namespace CSGO
 
 			g_pSurface->DrawSetTextPos(vecHeadScreen.x - iWide / 2, vecFeetScreen.y + 1);
 			g_pSurface->DrawPrintText(szString, wcslen(szString));
-
 		}
 
 		void DrawPlayerFromCache(CEntity* pEntity, Vector vecLocalPos)
 		{
+			Vector vecHead, vecFeet, vecHeadScreen, vecFeetScreen;
 
+			SyncData::CDataManager::PlayerData Data;
+			SyncData::g_DataManager->GetLastRecord(pEntity->Index(), Data);
+
+			float flLifetime = CSGO::g_pGlobals->curtime - Data.m_RecvTime;
+			if (flLifetime > 1.f)
+				return;
+
+			int iAlpha = static_cast<int>((1.f - flLifetime) * 255.f);
+
+			vecFeet = Data.m_Position;
+			vecHead = Vector(vecFeet);
+			vecHead.z += Data.m_Crouching ? 54.f : 73.f;
+
+			// Small offset to make boxes a bit biggers
+			vecFeet.z -= 3.25f;
+			vecHead.z += 3.25f;
+
+			if (!WorldToScreen(vecFeet, vecFeetScreen) || !WorldToScreen(vecHead, vecHeadScreen))
+				return;
+
+			float flWidth = abs(vecFeetScreen.y - vecHeadScreen.y) / 3.35f;
+
+			g_pSurface->DrawSetColor(0, 0, 0, iAlpha);
+			g_pSurface->DrawOutlinedRect(vecHeadScreen.x - flWidth - 1, vecHeadScreen.y - 1, vecFeetScreen.x + flWidth + 1, vecFeetScreen.y + 1);
+			g_pSurface->DrawOutlinedRect(vecHeadScreen.x - flWidth + 1, vecHeadScreen.y + 1, vecFeetScreen.x + flWidth - 1, vecFeetScreen.y - 1);
+			g_pSurface->DrawSetColor(255, 255, 0, iAlpha);
+			g_pSurface->DrawOutlinedRect(vecHeadScreen.x - flWidth, vecHeadScreen.y, vecFeetScreen.x + flWidth, vecFeetScreen.y);
+
+			player_info_t pInfo;
+			if (!g_pEngine->GetPlayerInfo(pEntity->Index(), &pInfo))
+				return;
+
+			wchar_t szString[128] = { '\0' };
+			wsprintfW(szString, L"%S", pInfo.m_Nickname);
+
+			int iWide, iTall;
+			g_pSurface->GetTextSize(g_hMainFont, szString, iWide, iTall);
+
+			g_pSurface->DrawSetTextFont(g_hMainFont);
+			g_pSurface->DrawSetTextColor(255, 255, 255, iAlpha);
+			g_pSurface->DrawSetTextPos(vecHeadScreen.x - iWide / 2, vecHeadScreen.y - 15);
+			g_pSurface->DrawPrintText(szString, wcslen(szString));
+
+			Vector vecDelta = vecLocalPos - vecFeet;
+			float flDistance = vecDelta.Length() * 0.01905f;
+
+			char buffer[64];
+			sprintf_s(buffer, "%.0f m", flDistance);
+			wsprintfW(szString, L"%S", buffer);
+
+			g_pSurface->GetTextSize(g_hMainFont, szString, iWide, iTall);
+
+			g_pSurface->DrawSetTextPos(vecHeadScreen.x - iWide / 2, vecFeetScreen.y + 1);
+			g_pSurface->DrawPrintText(szString, wcslen(szString));
 		}
 
 		void OnPaintTraverse()

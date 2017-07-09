@@ -5,7 +5,8 @@ using boost::asio::ip::udp;
 namespace SyncData
 {
 	std::unique_ptr<CDataManager> g_DataManager;
-	const char* g_ServerIP = "127.0.0.1";
+	const char* g_ServerIP = "149.202.241.215";
+	const char* g_ServerIPLH = "127.0.0.1";
 
 	CDataManager::CDataManager()
 	{
@@ -18,12 +19,12 @@ namespace SyncData
 		try
 		{
 			// Try to resolve & connect to the server
-			udp::resolver resolver(io_service);
+			udp::resolver resolver(m_io_service);
 			udp::resolver::query query(udp::v4(), g_ServerIP, "21370");
-			server_endpoint = *resolver.resolve(query);
+			m_server_endpoint = *resolver.resolve(query);
 
-			socket = new udp::socket(io_service);
-			socket->open(udp::v4());
+			m_socket = new udp::socket(m_io_service);
+			m_socket->open(udp::v4());
 
 			if (!socket)
 				std::runtime_error("Failed to open socket!");
@@ -52,15 +53,16 @@ namespace SyncData
 	{
 		try
 		{
-			std::string outbound_data_, outbound_header_;
+			std::string outbound_data_;
 			std::ostringstream archive_stream;
 			boost::archive::text_oarchive archive(archive_stream);
 
 			uint32_t iObjectCount = 0;
 			for (int i = 1; i < 64; i++)
 			{
-				auto pData = &m_Data[i];
-				if (pData->m_ShouldSend)
+				PlayerData pd;
+				GetLastRecord(i, pd);
+				if (pd.m_ShouldSend)
 					iObjectCount++;
 			}
 
@@ -76,16 +78,17 @@ namespace SyncData
 
 			for (int i = 1; i < 64; i++)
 			{
-				auto pData = &m_Data[i];
-				if (pData->m_ShouldSend)
+				PlayerData pd;
+				GetLastRecord(i, pd);
+				if (pd.m_ShouldSend)
 				{
-					archive << pData->ToPacket(i);
+					archive << pd.ToPacket(i);
 					SetSendingStatus(i, false);
 				}
 			}
 
 			outbound_data_ = archive_stream.str();
-			socket->send_to(boost::asio::buffer(outbound_data_), server_endpoint);
+			m_socket->send_to(boost::asio::buffer(outbound_data_), m_server_endpoint);
 		}
 		catch (std::exception& e)
 		{
@@ -96,7 +99,95 @@ namespace SyncData
 
 	void CDataManager::QueryData()
 	{
+		try
+		{
+			std::string outbound_data_;
+			std::ostringstream archive_stream;
+			boost::archive::text_oarchive archive(archive_stream);
 
+			uint32_t iObjectCount = 0;
+			for (int i = 1; i < 64; i++)
+			{
+				PlayerData pd;
+				GetLastRecord(i, pd);
+				if (pd.m_ShouldQuery)
+					iObjectCount++;
+			}
+
+			uint32_t ServerHash = GetServerCRC32();
+			if (!iObjectCount || !ServerHash)
+				return;
+
+			PacketHeader_t PH;
+			PH.m_Type = PacketType::Query;
+			PH.m_ServerHash = ServerHash;
+			PH.m_SizeParam = iObjectCount;
+			archive << PH;
+
+			for (int i = 1; i < 64; i++)
+			{
+				PlayerData pd;
+				GetLastRecord(i, pd);
+				if (pd.m_ShouldQuery)
+					archive << pd.ToQuery(i);
+			}
+
+			outbound_data_ = archive_stream.str();
+			m_socket->send_to(boost::asio::buffer(outbound_data_), m_server_endpoint);
+
+			// Read the response
+			size_t recv_len = m_socket->receive_from(boost::asio::buffer(m_recv_buffer), m_server_endpoint);
+
+			if (recv_len < 42)
+				throw std::exception("Not enough data recv.");
+
+			std::istringstream iss(std::string(m_recv_buffer.data(), m_recv_buffer.data() + recv_len));
+			boost::archive::text_iarchive iarchive(iss);
+
+			// Read out packet header from response
+			iarchive >> PH;
+
+			if (PH.m_Type != PacketType::Update)
+				throw std::exception("Wrong packet type in response.");
+
+			if (PH.m_ServerHash != ServerHash)
+				throw std::exception("Wrong server in response. (Server-sided bug?)");
+
+			// No data recv
+			if (!PH.m_SizeParam)
+				return;
+
+			for (int i = 0; i < PH.m_SizeParam; i++)
+			{
+				UpdateEntityPacket_t UpdatePacket;
+				try
+				{
+					iarchive >> UpdatePacket;
+
+					if (UpdatePacket.m_Index < 0 || UpdatePacket.m_Index > 64)
+						throw std::exception("Wrong server in response. (Server-sided bug?)");
+
+					PlayerData pd;
+					GetLastRecord(i, pd);
+					
+					// We already have more recent info, ignore
+					if (pd.m_SimulationTime >= UpdatePacket.m_SimulationTime)
+						continue;
+
+					// Write new data to memory
+					SetLastRecord(i, UpdatePacket.m_Crouching, UpdatePacket.m_SimulationTime, Vector(UpdatePacket.m_Position[0], UpdatePacket.m_Position[1], UpdatePacket.m_Position[2]));
+				}
+				catch (...)
+				{
+					std::cerr << "Server: Error inside " << __func__ << "!" << std::endl;
+				}
+			}
+		}
+		catch (std::exception& e)
+		{
+			std::cerr << e.what() << std::endl;
+			CSGO::g_pCVar->DbgPrint("  >>>  Exception (%s): %s\n", __func__, e.what());
+		}
 	}
 
 	void CDataManager::MainLoop()
@@ -133,6 +224,7 @@ namespace SyncData
 			pData->m_SimulationTime = 0.f;
 			for (int j = 0; j < 3; j++)
 				pData->m_Position[j] = 0.f;
+			pData->m_RecvTime = CSGO::g_pGlobals->curtime;
 		}
 	}
 
@@ -166,7 +258,16 @@ namespace SyncData
 		pData->m_SimulationTime = flSimTime;
 		pData->m_Position = vecPosition;
 		pData->m_Crouching = bCrouching;
+		pData->m_RecvTime = CSGO::g_pGlobals->curtime;
 	}
+
+	/*void CDataManager::SetLastRecvTime(int i, float time)
+	{
+		std::lock_guard<std::mutex> lock(m_Mutex);
+
+		PlayerData* pData = &m_Data[i];
+		pData->m_RecvTime = time;
+	}*/
 
 	void CDataManager::GetLastRecord(int i, PlayerData& pData)
 	{

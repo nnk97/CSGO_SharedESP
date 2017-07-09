@@ -11,20 +11,20 @@ namespace Data
 
 	void DataManager::LookForDeadServers()
 	{
-		auto cur_time = std::chrono::system_clock::now();
-		return;
+		if (m_Servers.size() == 0)
+			return;
 
-		for (int i = 0; i < m_Servers.size(); i++)
+		std::map<uint32_t, std::shared_ptr<GameServer>>::iterator itterator;
+		for (itterator = m_Servers.begin(); itterator != m_Servers.end(); itterator++)
 		{
-			auto& pServer = m_Servers[i];
-			
-			auto diff = cur_time - pServer->last_write;
-			auto ms_diff = std::chrono::duration_cast<std::chrono::milliseconds>(diff);
+ 			auto pServer = itterator->second;
 
-			if (ms_diff > std::chrono::milliseconds(5000))
+			auto ms_diff = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - pServer->last_write);
+			if (ms_diff > death_time_limit)
 			{
 				std::cout << "Killing server: " << std::hex << pServer->GetHaskKey() << std::endl;
 				m_Servers.erase(pServer->GetHaskKey());
+				break;
 			}
 		}
 	}

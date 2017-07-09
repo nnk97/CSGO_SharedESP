@@ -5,7 +5,7 @@ namespace Data
 	GameServer::GameServer(uint32_t _Hash)
 	{
 		m_ServerHash = _Hash;
-		last_write = std::chrono::system_clock::now();
+		last_write = std::chrono::steady_clock::now();
 		ResetData();
 	}
 
@@ -13,7 +13,7 @@ namespace Data
 	{
 		std::lock_guard<std::mutex> lock(m_Mutex);
 
-		last_write = std::chrono::system_clock::now();
+		last_write = std::chrono::steady_clock::now();
 
 	}
 
@@ -28,7 +28,7 @@ namespace Data
 	{
 		std::lock_guard<std::mutex> lock(m_Mutex);
 
-		last_write = std::chrono::system_clock::now();
+		last_write = std::chrono::steady_clock::now();
 		m_Data[i] = data;
 	}
 }

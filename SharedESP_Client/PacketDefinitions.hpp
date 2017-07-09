@@ -11,6 +11,20 @@ namespace SyncData
 		Query
 	};
 
+	struct QueryEntityPacket_t
+	{
+	public:
+		int m_Index;
+		float m_SimulationTime;
+
+		template <typename Archive>
+		void serialize(Archive& ar, const unsigned int version)
+		{
+			ar & m_Index;
+			ar & m_SimulationTime;
+		}
+	};
+
 	struct UpdateEntityPacket_t
 	{
 	public:
@@ -28,20 +42,6 @@ namespace SyncData
 			ar & m_Position[1];
 			ar & m_Position[2];
 			ar & m_Crouching;
-		}
-	};
-
-	struct QueryEntityPacket_t
-	{
-	public:
-		int m_Index;
-		float m_SimulationTime;
-
-		template <typename Archive>
-		void serialize(Archive& ar, const unsigned int version)
-		{
-			ar & m_Index;
-			ar & m_SimulationTime;
 		}
 	};
 

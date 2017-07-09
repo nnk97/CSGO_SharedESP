@@ -305,38 +305,13 @@ namespace CSGO
 	class CServerIPFinder 
 	{
 	public:
-		CServerIPFinder()
-		{
-			DWORD dwServerIPPtr = dwFindPattern(GetModuleHandleA("client.dll"), (PBYTE)"\x6A\x00\x68\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x8B\x74\x24\x1C", "xxx????x????xxxx");
-			if (!dwServerIPPtr)
-				MessageBoxA(NULL, "Failed to signature scan server IP ptr, manual update required!", "Error!", 0);
-			dwServerIPPtr = *(DWORD*)(dwServerIPPtr + 3);
-			m_ptr = (const char*)(dwServerIPPtr + 4);
-		}
+		CServerIPFinder();
 		
 		const char* GetPtr() { return m_ptr; }
 		bool IsLocalHost() { return (stricmp(m_ptr,"loopback:0") == 0); }
 
 	private:
 		const char* m_ptr = nullptr;
-
-		bool bDataCompare(const BYTE *pData, const BYTE *bMask, const char *szMask)
-		{
-			for (; *szMask; ++szMask, ++pData, ++bMask)
-				if (*szMask == 'x' && *pData != *bMask)
-					return false;
-			return (*szMask) == NULL;
-		}
-
-		DWORD dwFindPattern(HMODULE hModule, const BYTE* bMask, char* szMask)
-		{
-			MODULEINFO ModuleInfo;
-			GetModuleInformation(GetCurrentProcess(), hModule, &ModuleInfo, sizeof(MODULEINFO));
-			for (DWORD i = 0; i < ModuleInfo.SizeOfImage; i++)
-				if (bDataCompare((BYTE*)((DWORD)hModule + i), bMask, szMask))
-					return (DWORD)((DWORD)hModule + i);
-			return NULL;
-		}
 
 	};
 	extern std::unique_ptr<CServerIPFinder> g_pServerIP;
@@ -351,6 +326,23 @@ namespace CSGO
 		}
 	};
 	extern CPanel* g_pPanel;
+
+	struct GlobalVars_t
+	{
+		float                   realtime;
+		int                     framecount;
+		float                   absoluteframetime;
+		float					unknown;
+		float                   curtime;
+		float                   frametime;
+		int                     maxClients;
+		int                     tickcount;
+		float                   interval_per_tick;
+		float                   interpolation_amount;
+		int                     simTicksThisFrame;
+		int                     network_protocol;
+	};
+	extern GlobalVars_t* g_pGlobals;
 
 	void InitializeSDK();
 
