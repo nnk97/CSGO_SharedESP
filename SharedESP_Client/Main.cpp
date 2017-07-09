@@ -10,11 +10,6 @@ void Initialize()
 	SyncData::g_DataManager = std::make_unique<SyncData::CDataManager>();
 }
 
-void CleanUp()
-{
-	CSGO::RemoveHooks();
-}
-
 int __stdcall DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 {
 	if (dwReason == DLL_PROCESS_ATTACH)

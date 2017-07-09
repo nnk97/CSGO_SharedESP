@@ -5,8 +5,7 @@ using boost::asio::ip::udp;
 namespace SyncData
 {
 	std::unique_ptr<CDataManager> g_DataManager;
-	const char* g_ServerIP = "149.202.241.215";
-	const char* g_ServerIPLH = "127.0.0.1";
+	const char* g_ServerIP = "127.0.0.1"; // <- IP address where you host the server
 
 	CDataManager::CDataManager()
 	{
@@ -20,7 +19,7 @@ namespace SyncData
 		{
 			// Try to resolve & connect to the server
 			udp::resolver resolver(m_io_service);
-			udp::resolver::query query(udp::v4(), g_ServerIP, "21370");
+			udp::resolver::query query(udp::v4(), g_ServerIP, "21370");	// <- Set desired port here
 			m_server_endpoint = *resolver.resolve(query);
 
 			m_socket = new udp::socket(m_io_service);

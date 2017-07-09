@@ -105,9 +105,10 @@ namespace CSGO
 	ShutdownFn orgShutdown = nullptr;
 	void __fastcall hkShutdown(void* ecx, void* edx)
 	{
-		RemoveHooks();
 		SyncData::g_DataManager->m_bExit = true;
-		SyncData::g_DataManager->m_Thread.detach();
+		if (SyncData::g_DataManager->m_Thread.joinable())
+			SyncData::g_DataManager->m_Thread.join();
+
 		orgShutdown(ecx);
 	}
 
