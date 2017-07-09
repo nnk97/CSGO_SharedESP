@@ -15,9 +15,8 @@ namespace Data
 		PlayerData m_Data[65];
 
 	public:
-		std::chrono::time_point<std::chrono::steady_clock> last_write;
+		std::chrono::time_point<std::chrono::steady_clock> last_usage;
 
-		void ResetData();
 		PlayerData GetData(int i);
 		void SetData(int i, PlayerData data);
 		uint32_t GetHaskKey() { return m_ServerHash; };

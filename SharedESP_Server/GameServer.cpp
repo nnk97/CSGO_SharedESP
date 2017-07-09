@@ -5,22 +5,14 @@ namespace Data
 	GameServer::GameServer(uint32_t _Hash)
 	{
 		m_ServerHash = _Hash;
-		last_write = std::chrono::steady_clock::now();
-		ResetData();
-	}
-
-	void GameServer::ResetData()
-	{
-		std::lock_guard<std::mutex> lock(m_Mutex);
-
-		last_write = std::chrono::steady_clock::now();
-
+		last_usage = std::chrono::steady_clock::now();
 	}
 
 	PlayerData GameServer::GetData(int i)
 	{
 		std::lock_guard<std::mutex> lock(m_Mutex);
 
+		last_usage = std::chrono::steady_clock::now();
 		return m_Data[i];
 	}
 
@@ -28,7 +20,7 @@ namespace Data
 	{
 		std::lock_guard<std::mutex> lock(m_Mutex);
 
-		last_write = std::chrono::steady_clock::now();
+		last_usage = std::chrono::steady_clock::now();
 		m_Data[i] = data;
 	}
 }

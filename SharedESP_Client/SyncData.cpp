@@ -46,7 +46,7 @@ namespace SyncData
 
 		boost::crc_32_type result;
 		result.process_bytes(str, strlen(str));
-		return 0x12345678;//(uint32_t)result.checksum();
+		return (uint32_t)result.checksum();
 	}
 
 	void CDataManager::SendData()
@@ -260,14 +260,6 @@ namespace SyncData
 		pData->m_Crouching = bCrouching;
 		pData->m_RecvTime = CSGO::g_pGlobals->curtime;
 	}
-
-	/*void CDataManager::SetLastRecvTime(int i, float time)
-	{
-		std::lock_guard<std::mutex> lock(m_Mutex);
-
-		PlayerData* pData = &m_Data[i];
-		pData->m_RecvTime = time;
-	}*/
 
 	void CDataManager::GetLastRecord(int i, PlayerData& pData)
 	{

@@ -19,10 +19,10 @@ namespace Data
 		{
  			auto pServer = itterator->second;
 
-			auto ms_diff = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - pServer->last_write);
+			auto ms_diff = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - pServer->last_usage);
 			if (ms_diff > death_time_limit)
 			{
-				std::cout << "Killing server: " << std::hex << pServer->GetHaskKey() << std::endl;
+				std::cout << "Killing inactive server: " << std::hex << pServer->GetHaskKey() << std::endl;
 				m_Servers.erase(pServer->GetHaskKey());
 				break;
 			}

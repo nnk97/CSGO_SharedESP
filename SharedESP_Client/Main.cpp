@@ -19,8 +19,6 @@ int __stdcall DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 {
 	if (dwReason == DLL_PROCESS_ATTACH)
 		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Initialize, 0, 0, 0);
-	else if (dwReason == DLL_PROCESS_DETACH)
-		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)CleanUp, 0, 0, 0);
 	return TRUE;
 }
 

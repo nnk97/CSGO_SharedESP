@@ -21,7 +21,6 @@ namespace SyncData
 	private:
 		std::mutex m_Mutex;
 
-
 		// asio
 		boost::array<char, 2048> m_recv_buffer;
 		boost::asio::io_service m_io_service;
@@ -71,7 +70,6 @@ namespace SyncData
 		void SetQueryStatus(int i, bool bShouldQuery);
 		void GetLastRecord(int i, PlayerData& pData);
 		void SetLastRecord(int i, bool bCrouching, float flSimTime, Vector vecPosition);
-		//void SetLastRecvTime(int i, float time);
 	};
 	
 	extern std::unique_ptr<CDataManager> g_DataManager;
