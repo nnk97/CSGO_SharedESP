@@ -50,8 +50,8 @@ namespace SyncData
 				UpdateEntityPacket_t temp;
 				temp.m_Index = i;
 				temp.m_SimulationTime = m_SimulationTime;
-				for (int i = 0; i < 3; i++)
-					temp.m_Position[i] = m_Position[i];
+				for (int j = 0; j < 3; j++)
+					temp.m_Position[j] = m_Position[j];
 				temp.m_Crouching = m_Crouching;
 				return temp;
 			}

@@ -70,9 +70,9 @@ namespace Server
 			{
 				data >> QueryPacket;
 
-				Data::PlayerData PD;
-				Data::Manager->PopData(_Header.m_ServerHash, QueryPacket.m_Index);
+				Data::PlayerData PD = Data::Manager->PopData(_Header.m_ServerHash, QueryPacket.m_Index);
 
+				std::cout << "[" << i << "] " << PD.m_Simulation << " - " << QueryPacket.m_SimulationTime << std::endl;
 				if (PD.m_Simulation > QueryPacket.m_SimulationTime)
 					m_ValidTargets.push_back(std::make_pair(QueryPacket.m_Index, PD));
 			}
@@ -81,6 +81,8 @@ namespace Server
 				std::cerr << "Server: Error inside " << __func__ << "!" << std::endl;
 			}
 		}
+
+		//std::cout << "Recv Query request, got " << m_ValidTargets.size() << " of " << _Header.m_SizeParam << " valid targets for response!" << std::endl;
 
 		// Create & send response for the client
 		try

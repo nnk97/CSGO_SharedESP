@@ -77,8 +77,8 @@ namespace CSGO
 		g_pEngine = GetInterface<CEngine>("engine.dll", "VEngineClient");
 		g_pPanel = GetInterface<CPanel>("vgui2.dll", "VGUI_Panel");
 
-		DWORD dwGlobalVars = dwFindPattern(GetModuleHandleA("client.dll"), (PBYTE)"\xA1\x00\x00\x00\x00\x8B\x4D\xFC\x8B\x55\x08", "x????xxxxxx");
-		g_pGlobals = (GlobalVars_t*)**(PDWORD**)(dwGlobalVars + 1);
+		// C casting, lols
+		g_pGlobals = **(GlobalVars_t***)(dwFindPattern(GetModuleHandleA("client.dll"), (PBYTE)"\xA1\x00\x00\x00\x00\x8B\x4D\xFC\x8B\x55\x08", "x????xxxxxx") + 1);
 
 		// Grab network variables
 		std::unique_ptr<CNetVars> pNVManager = std::make_unique<CNetVars>();
@@ -135,16 +135,17 @@ namespace CSGO
 					continue;
 				}
 
-				if (pEntity->IsDormant())
+				SyncData::CDataManager::PlayerData PD;
+				SyncData::g_DataManager->GetLastRecord(i, PD);
+
+				if (pEntity->IsDormant() || pEntity->GetSimulationTime() == 0.f || pEntity->GetSimulationTime() < PD.m_SimulationTime)
 				{
 					SyncData::g_DataManager->SetQueryStatus(i, true);
 					SyncData::g_DataManager->SetSendingStatus(i, false);
 				}
 				else
 				{
-					SyncData::CDataManager::PlayerData PD;
 					SyncData::g_DataManager->SetQueryStatus(i, false);
-					SyncData::g_DataManager->GetLastRecord(i, PD);
 
 					// Got new data for the server?
 					if (pEntity->GetSimulationTime() > PD.m_SimulationTime)

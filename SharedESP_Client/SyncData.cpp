@@ -38,7 +38,7 @@ namespace SyncData
 		}
 	}
 
-	int32_t GetServerCRC32()
+	uint32_t GetServerCRC32()
 	{
 		const char* str = CSGO::g_pServerIP->GetPtr();
 		if (!str)
@@ -46,7 +46,7 @@ namespace SyncData
 
 		boost::crc_32_type result;
 		result.process_bytes(str, strlen(str));
-		return result.checksum();
+		return 0x12345678;//(uint32_t)result.checksum();
 	}
 
 	void CDataManager::SendData()
@@ -114,7 +114,7 @@ namespace SyncData
 					iObjectCount++;
 			}
 
-			uint32_t ServerHash = GetServerCRC32();
+			auto ServerHash = GetServerCRC32();
 			if (!iObjectCount || !ServerHash)
 				return;
 
@@ -175,7 +175,7 @@ namespace SyncData
 						continue;
 
 					// Write new data to memory
-					SetLastRecord(i, UpdatePacket.m_Crouching, UpdatePacket.m_SimulationTime, Vector(UpdatePacket.m_Position[0], UpdatePacket.m_Position[1], UpdatePacket.m_Position[2]));
+					SetLastRecord(UpdatePacket.m_Index, UpdatePacket.m_Crouching, UpdatePacket.m_SimulationTime, Vector(UpdatePacket.m_Position[0], UpdatePacket.m_Position[1], UpdatePacket.m_Position[2]));
 				}
 				catch (...)
 				{

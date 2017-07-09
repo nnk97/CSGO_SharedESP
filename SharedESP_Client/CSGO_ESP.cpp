@@ -73,12 +73,9 @@ namespace CSGO
 			g_pSurface->DrawPrintText(szString, wcslen(szString));
 		}
 
-		void DrawPlayerFromCache(CEntity* pEntity, Vector vecLocalPos)
+		void DrawPlayerFromCache(CEntity* pEntity, Vector vecLocalPos, SyncData::CDataManager::PlayerData& Data)
 		{
 			Vector vecHead, vecFeet, vecHeadScreen, vecFeetScreen;
-
-			SyncData::CDataManager::PlayerData Data;
-			SyncData::g_DataManager->GetLastRecord(pEntity->Index(), Data);
 
 			float flLifetime = CSGO::g_pGlobals->curtime - Data.m_RecvTime;
 			if (flLifetime > 1.f)
@@ -153,7 +150,17 @@ namespace CSGO
 				if (!pEntity->IsAlive())
 					continue;
 
-				pEntity->IsDormant() ? DrawPlayerFromCache(pEntity, vecLocalPosition) : DrawPlayer(pEntity, vecLocalPosition);
+				if (!pEntity->IsDormant())
+				{
+					DrawPlayer(pEntity, vecLocalPosition);
+					continue;
+				}
+
+				SyncData::CDataManager::PlayerData Data;
+				SyncData::g_DataManager->GetLastRecord(i, Data);
+
+				if (Data.m_ShouldQuery && Data.m_SimulationTime != 0.f)
+					DrawPlayerFromCache(pEntity, vecLocalPosition, Data);
 			}
 		}
 
