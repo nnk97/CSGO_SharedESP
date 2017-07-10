@@ -49,9 +49,9 @@ namespace Server
 
 				Data::Manager->PushData(_Header.m_ServerHash, UpdatePacket.m_Index, PD);
 			}
-			catch (...)
+			catch (const std::exception& e)
 			{
-				std::cerr << "Server: Error inside " << __func__ << "!" << std::endl;
+				std::cerr << "Server: Error inside " << __func__ << " -> " << e.what() << std::endl;
 			}
 		}
 	}
@@ -72,9 +72,9 @@ namespace Server
 				if (PD.m_Simulation > QueryPacket.m_SimulationTime)
 					m_ValidTargets.push_back(std::make_pair(QueryPacket.m_Index, PD));
 			}
-			catch (...)
+			catch (const std::exception& e)
 			{
-				std::cerr << "Server: Error inside " << __func__ << "!" << std::endl;
+				std::cerr << "Server: Error inside " << __func__ << " -> " << e.what() << std::endl;
 			}
 		}
 

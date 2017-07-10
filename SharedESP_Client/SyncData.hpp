@@ -33,6 +33,21 @@ namespace SyncData
 		void SendData();
 		void QueryData();
 
+		class RecvManager
+		{
+		public:
+			std::mutex m_RecvMutex;
+			bool m_RecvComplete = false;
+			size_t m_RecvLenght = 0;
+
+			void SetRecvState(bool state);
+			bool GetRecvState();
+
+			void RecvThread();
+			size_t RecvWithTimeout();
+		};
+		RecvManager m_RecvManager;
+
 	public:
 		struct PlayerData
 		{
@@ -63,8 +78,11 @@ namespace SyncData
 				return temp;
 			}
 		};
+
+	private:
 		PlayerData m_Data[65];
 
+	public:
 		void MarkAsInvalidEntity(int i);
 		void SetSendingStatus(int i, bool bShouldQuery);
 		void SetQueryStatus(int i, bool bShouldQuery);

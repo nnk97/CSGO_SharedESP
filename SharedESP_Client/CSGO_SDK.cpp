@@ -106,8 +106,7 @@ namespace CSGO
 	void __fastcall hkShutdown(void* ecx, void* edx)
 	{
 		SyncData::g_DataManager->m_bExit = true;
-		if (SyncData::g_DataManager->m_Thread.joinable())
-			SyncData::g_DataManager->m_Thread.join();
+		SyncData::g_DataManager->m_Thread.detach();
 
 		orgShutdown(ecx);
 	}

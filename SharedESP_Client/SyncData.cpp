@@ -135,7 +135,9 @@ namespace SyncData
 			m_socket->send_to(boost::asio::buffer(outbound_data_), m_server_endpoint);
 
 			// Read the response
-			size_t recv_len = m_socket->receive_from(boost::asio::buffer(m_recv_buffer), m_server_endpoint);
+			size_t recv_len = m_RecvManager.RecvWithTimeout();
+			if (!recv_len)
+				return;
 
 			if (recv_len < 42)
 				throw std::exception("Not enough data recv.");
@@ -265,5 +267,50 @@ namespace SyncData
 		std::lock_guard<std::mutex> lock(m_Mutex);
 		
 		std::memcpy(&pData, &m_Data[i], sizeof(PlayerData));
+	}
+
+	void CDataManager::RecvManager::SetRecvState(bool state)
+	{
+		std::lock_guard<std::mutex> lock(m_RecvMutex);
+		m_RecvComplete = state;
+	}
+
+	bool CDataManager::RecvManager::GetRecvState()
+	{
+		std::lock_guard<std::mutex> lock(m_RecvMutex);
+		return m_RecvComplete;
+	}
+
+	void CDataManager::RecvManager::RecvThread()
+	{
+		m_RecvLenght = g_DataManager->m_socket->receive_from(boost::asio::buffer(g_DataManager->m_recv_buffer), g_DataManager->m_server_endpoint);
+		SetRecvState(true);
+	}
+
+	size_t CDataManager::RecvManager::RecvWithTimeout()
+	{
+		SetRecvState(false);
+		m_RecvLenght = 0;
+
+		std::chrono::time_point<std::chrono::steady_clock> start = std::chrono::steady_clock::now();
+		std::thread recv_thread = std::thread([this] { RecvThread(); });
+
+		while (!GetRecvState())
+		{
+			auto ms_diff = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
+			if (ms_diff > std::chrono::milliseconds(1000))
+			{
+				CSGO::g_pCVar->DbgPrint("Timeouted on %s!\n", __func__);
+				recv_thread.detach();
+				SuspendThread(recv_thread.native_handle());
+				TerminateThread(recv_thread.native_handle(), 0);
+				return 0;
+			}
+		}
+
+		if (recv_thread.joinable())
+			recv_thread.join();
+
+		return m_RecvLenght;
 	}
 }
