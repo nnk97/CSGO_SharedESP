@@ -43,8 +43,11 @@ namespace SyncData
 		if (!str)
 			return 0;
 
+		std::string hash_str = std::string(str);
+		hash_str.append(CSGO::g_pEngine->GetLevelNameShort());
+
 		boost::crc_32_type result;
-		result.process_bytes(str, strlen(str));
+		result.process_bytes(hash_str.c_str(), hash_str.length());
 		return (uint32_t)result.checksum();
 	}
 
@@ -202,7 +205,10 @@ namespace SyncData
 					break;
 
 				if (!CSGO::g_pEngine->IsInGame() || !CSGO::g_pEngine->IsConnected())
+				{
+					ResetData();
 					continue;
+				}
 
 				SendData();
 				QueryData();

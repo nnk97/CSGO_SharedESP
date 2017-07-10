@@ -299,6 +299,12 @@ namespace CSGO
 			typedef bool(__thiscall* OrgFunc)(PVOID, int, player_info_t*);
 			return CallVirtual<OrgFunc>(this, 8)(this, index, pInfo);
 		}
+		
+		const char* GetLevelNameShort()
+		{
+			typedef const char*(__thiscall* OrgFunc)(PVOID);
+			return CallVirtual<OrgFunc>(this, 52)(this);
+		}
 	};
 	extern CEngine* g_pEngine;
 
