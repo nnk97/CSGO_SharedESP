@@ -33,69 +33,75 @@ namespace Server
 			[this](boost::system::error_code ec, std::size_t bytes_recvd) { this->handle_receive(ec, bytes_recvd); });
 	}
 
-	void SharedESP_Server::HandlePacketUpdate(PacketHeader_t& _Header, boost::archive::text_iarchive& data)
+	void SharedESP_Server::HandlePacketUpdate(PacketHeader_t* _Header, size_t recv_lenght)
 	{
-		for (int i = 0; i < _Header.m_SizeParam; i++)
+		size_t DesiredPacketSize = sizeof(PacketHeader_t) + sizeof(UpdateEntityPacket_t) * _Header->m_SizeParam;
+		const char* Buffer = m_recv_buffer.data();
+
+		if (recv_lenght != DesiredPacketSize)
 		{
-			UpdateEntityPacket_t UpdatePacket;
-			try
-			{
-				data >> UpdatePacket;
+			std::cerr << "Recv wrong amount of data (R: " << recv_lenght << "; D: " << DesiredPacketSize << ") in " << __func__ << std::endl;
+			return;
+		}
 
-				Data::PlayerData PD;
-				PD.m_Crouch = UpdatePacket.m_Crouching;
-				PD.m_Simulation = UpdatePacket.m_SimulationTime;
-				std::memcpy(PD.m_Position, UpdatePacket.m_Position, sizeof(float) * 3);
+		for (int i = 0; i < _Header->m_SizeParam; i++)
+		{
+			UpdateEntityPacket_t* UpdatePacket = (UpdateEntityPacket_t*)(Buffer + sizeof(PacketHeader_t) + sizeof(UpdateEntityPacket_t) * i);
 
-				Data::Manager->PushData(_Header.m_ServerHash, UpdatePacket.m_Index, PD);
-			}
-			catch (const std::exception& e)
-			{
-				std::cerr << "Server: Error inside " << __func__ << " -> " << e.what() << std::endl;
-			}
+			Data::PlayerData PD;
+			PD.m_Crouch = UpdatePacket->m_Crouching;
+			PD.m_Simulation = UpdatePacket->m_SimulationTime;
+			std::memcpy(PD.m_Position, UpdatePacket->m_Position, sizeof(float) * 3);
+
+			Data::Manager->PushData(_Header->m_ServerHash, UpdatePacket->m_Index, PD);
 		}
 	}
 
-	void SharedESP_Server::HandlePacketQuery(PacketHeader_t& _Header, boost::archive::text_iarchive& data)
+	void SharedESP_Server::HandlePacketQuery(PacketHeader_t* _Header, size_t recv_lenght)
 	{
-		std::vector<std::pair<int, Data::PlayerData>> m_ValidTargets;
+		size_t DesiredPacketSize = sizeof(PacketHeader_t) + sizeof(QueryEntityPacket_t) * _Header->m_SizeParam;
+		const char* Buffer = m_recv_buffer.data();
 
-		for (int i = 0; i < _Header.m_SizeParam; i++)
+		if (recv_lenght != DesiredPacketSize)
 		{
-			QueryEntityPacket_t QueryPacket;
-			try
-			{
-				data >> QueryPacket;
+			std::cerr << "Recv wrong amount of data (R: " << recv_lenght << "; D: " << DesiredPacketSize << ") in " << __func__ << std::endl;
+			return;
+		}
 
-				Data::PlayerData PD = Data::Manager->PopData(_Header.m_ServerHash, QueryPacket.m_Index);
+		std::vector<std::pair<int, Data::PlayerData>> ValidTargets;
 
-				if (PD.m_Simulation > QueryPacket.m_SimulationTime)
-					m_ValidTargets.push_back(std::make_pair(QueryPacket.m_Index, PD));
-			}
-			catch (const std::exception& e)
-			{
-				std::cerr << "Server: Error inside " << __func__ << " -> " << e.what() << std::endl;
-			}
+		for (int i = 0; i < _Header->m_SizeParam; i++)
+		{
+			QueryEntityPacket_t* QueryPacket = (QueryEntityPacket_t*)(Buffer + sizeof(PacketHeader_t) + sizeof(QueryEntityPacket_t) * i);
+			Data::PlayerData PD = Data::Manager->PopData(_Header->m_ServerHash, QueryPacket->m_Index);
+
+			if (PD.m_Simulation > QueryPacket->m_SimulationTime)
+				ValidTargets.push_back(std::make_pair(QueryPacket->m_Index, PD));
 		}
 
 		// Create & send response for the client
 		try
 		{
-			std::string outbound_data_;
-			std::ostringstream archive_stream;
-			boost::archive::text_oarchive archive(archive_stream);
+			std::size_t DesiredPacketSize = sizeof(PacketHeader_t) + sizeof(UpdateEntityPacket_t) * ValidTargets.size();
+			std::size_t BufferPos = 0;
+			char* SendBuffer = new char[DesiredPacketSize];
 
 			PacketHeader_t PH;
 			PH.m_Type = PacketType::Update;
-			PH.m_ServerHash = _Header.m_ServerHash;
-			PH.m_SizeParam = m_ValidTargets.size();
-			archive << PH;
+			PH.m_ServerHash = _Header->m_ServerHash;
+			PH.m_SizeParam = ValidTargets.size();
+
+			// Copy header to buffer
+			std::memcpy(SendBuffer, &PH, sizeof(PacketHeader_t));
+			BufferPos += sizeof(PacketHeader_t);
 
 			for (int i = 0; i < PH.m_SizeParam; i++)
-				archive << m_ValidTargets[i].second.ToPacket(m_ValidTargets[i].first);
+			{
+				std::memcpy((SendBuffer + BufferPos), &(ValidTargets[i].second.ToPacket(ValidTargets[i].first)), sizeof(UpdateEntityPacket_t));
+				BufferPos += sizeof(UpdateEntityPacket_t);
+			}
 
-			outbound_data_ = archive_stream.str();
-			m_socket->send_to(boost::asio::buffer(outbound_data_), m_remote_endpoint);
+			m_socket->send_to(boost::asio::buffer(SendBuffer, DesiredPacketSize), m_remote_endpoint);
 		}
 		catch (std::exception& e)
 		{
@@ -109,26 +115,27 @@ namespace Server
 		{
 			try
 			{
-				std::istringstream iss(std::string(m_recv_buffer.data(), m_recv_buffer.data() + bytes_transferred));
-				boost::archive::text_iarchive iarchive(iss);
-
-				PacketHeader_t PHeader;
-				iarchive >> PHeader;
-
-				if (!PHeader.m_SizeParam || !PHeader.m_ServerHash)
+				if (bytes_transferred < sizeof(PacketHeader_t))
 				{
 					start_receive();
 					return;
 				}
 
-				switch (PHeader.m_Type)
+				PacketHeader_t* Header = (PacketHeader_t*)(m_recv_buffer.data());
+				if (!Header->m_SizeParam || !Header->m_ServerHash)
+				{
+					start_receive();
+					return;
+				}
+
+				switch (Header->m_Type)
 				{
 				case PacketType::Update:
-					HandlePacketUpdate(PHeader, iarchive);
+					HandlePacketUpdate(Header, bytes_transferred);
 					break;
 
 				case PacketType::Query:
-					HandlePacketQuery(PHeader, iarchive);
+					HandlePacketQuery(Header, bytes_transferred);
 					break;
 				}
 			}
