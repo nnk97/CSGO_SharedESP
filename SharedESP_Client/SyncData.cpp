@@ -289,7 +289,16 @@ namespace SyncData
 
 	void CDataManager::RecvManager::RecvThread()
 	{
-		m_RecvLenght = g_DataManager->m_socket->receive_from(boost::asio::buffer(g_DataManager->m_recv_buffer), g_DataManager->m_server_endpoint);
+		try
+		{
+			m_RecvLenght = g_DataManager->m_socket->receive_from(boost::asio::buffer(g_DataManager->m_recv_buffer), g_DataManager->m_server_endpoint);
+		}
+		catch (std::exception& e)
+		{
+			std::cerr << e.what() << std::endl;
+			CSGO::g_pCVar->DbgPrint("  >>>  Exception (%s): %s\n", __func__, e.what());
+		}
+
 		SetRecvState(true);
 	}
 
