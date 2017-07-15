@@ -28,8 +28,8 @@ namespace Server
 		void handle_send(std::string message, const boost::system::error_code& error, std::size_t bytes_transferred) {};
 		void service_loop();
 
-		void HandlePacketUpdate(PacketHeader_t* _Header, size_t recv_lenght);
-		void HandlePacketQuery(PacketHeader_t* _Header, size_t recv_lenght);
+		void HandlePacketUpdate(PacketHeader_t& _Header, boost::archive::text_iarchive& data);
+		void HandlePacketQuery(PacketHeader_t& _Header, boost::archive::text_iarchive& data);
 
 	public:
 

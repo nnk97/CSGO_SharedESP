@@ -1,7 +1,6 @@
 # CSGO_SharedESP
 Proof of concept for sharing ESP data over network.  
 Both server and client use boost asio for communication over UDP.  
-It's just a small project which helped me to learn sockets communication.  
   
 **Video showcase**:  
 [![YouTube link](https://img.youtube.com/vi/6fVcXVIlHRo/0.jpg)](https://www.youtube.com/watch?v=6fVcXVIlHRo)  

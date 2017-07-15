@@ -55,6 +55,9 @@ namespace SyncData
 	{
 		try
 		{
+			std::string outbound_data_;
+			std::ostringstream archive_stream;
+			boost::archive::text_oarchive archive(archive_stream);
 
 			uint32_t iObjectCount = 0;
 			for (int i = 1; i < 64; i++)
@@ -69,18 +72,11 @@ namespace SyncData
 			if (!iObjectCount || !ServerHash)
 				return;
 
-			std::size_t DesiredPacketSize = sizeof(PacketHeader_t) + sizeof(UpdateEntityPacket_t) * iObjectCount;
-			std::size_t BufferPos = 0;
-			char* SendBuffer = new char[DesiredPacketSize];
-
 			PacketHeader_t PH;
 			PH.m_Type = PacketType::Update;
 			PH.m_ServerHash = ServerHash;
 			PH.m_SizeParam = iObjectCount;
-
-			// Copy header to buffer
-			std::memcpy(SendBuffer, &PH, sizeof(PacketHeader_t));
-			BufferPos += sizeof(PacketHeader_t);
+			archive << PH;
 
 			for (int i = 1; i < 64; i++)
 			{
@@ -88,13 +84,13 @@ namespace SyncData
 				GetLastRecord(i, pd);
 				if (pd.m_ShouldSend)
 				{
-					std::memcpy((SendBuffer + BufferPos), &pd.ToPacket(i), sizeof(UpdateEntityPacket_t));
-					BufferPos += sizeof(UpdateEntityPacket_t);
+					archive << pd.ToPacket(i);
 					SetSendingStatus(i, false);
 				}
 			}
 
-			m_socket->send_to(boost::asio::buffer(SendBuffer, DesiredPacketSize), m_server_endpoint);
+			outbound_data_ = archive_stream.str();
+			m_socket->send_to(boost::asio::buffer(outbound_data_), m_server_endpoint);
 		}
 		catch (std::exception& e)
 		{
@@ -107,6 +103,10 @@ namespace SyncData
 	{
 		try
 		{
+			std::string outbound_data_;
+			std::ostringstream archive_stream;
+			boost::archive::text_oarchive archive(archive_stream);
+
 			uint32_t iObjectCount = 0;
 			for (int i = 1; i < 64; i++)
 			{
@@ -120,70 +120,71 @@ namespace SyncData
 			if (!iObjectCount || !ServerHash)
 				return;
 
-			std::size_t DesiredPacketSize = sizeof(PacketHeader_t) + sizeof(QueryEntityPacket_t) * iObjectCount;
-			std::size_t BufferPos = 0;
-			char* SendBuffer = new char[DesiredPacketSize];
-
 			PacketHeader_t PH;
 			PH.m_Type = PacketType::Query;
 			PH.m_ServerHash = ServerHash;
 			PH.m_SizeParam = iObjectCount;
-
-			// Copy header to buffer
-			std::memcpy(SendBuffer, &PH, sizeof(PacketHeader_t));
-			BufferPos += sizeof(PacketHeader_t);
+			archive << PH;
 
 			for (int i = 1; i < 64; i++)
 			{
 				PlayerData pd;
 				GetLastRecord(i, pd);
 				if (pd.m_ShouldQuery)
-				{
-					std::memcpy((SendBuffer + BufferPos), &pd.ToQuery(i), sizeof(QueryEntityPacket_t));
-					BufferPos += sizeof(QueryEntityPacket_t);
-				}
+					archive << pd.ToQuery(i);
 			}
 
-			m_socket->send_to(boost::asio::buffer(SendBuffer, DesiredPacketSize), m_server_endpoint);
+			outbound_data_ = archive_stream.str();
+			m_socket->send_to(boost::asio::buffer(outbound_data_), m_server_endpoint);
 
 			// Read the response
 			size_t recv_len = m_RecvManager.RecvWithTimeout();
 			if (!recv_len)
 				return;
 
-			if (recv_len < sizeof(PacketHeader_t))
+			if (recv_len < 42)
 				throw std::exception("Not enough data recv.");
 
-			const char* Buffer = m_recv_buffer.data();
-			PacketHeader_t* _Header = (PacketHeader_t*)(Buffer);
+			std::istringstream iss(std::string(m_recv_buffer.data(), m_recv_buffer.data() + recv_len));
+			boost::archive::text_iarchive iarchive(iss);
 
-			if (_Header->m_Type != PacketType::Update)
+			// Read out packet header from response
+			iarchive >> PH;
+
+			if (PH.m_Type != PacketType::Update)
 				throw std::exception("Wrong packet type in response.");
 
-			if (!_Header->m_SizeParam)
-				return;
-
-			DesiredPacketSize = sizeof(PacketHeader_t) + sizeof(QueryEntityPacket_t) * _Header->m_SizeParam;
-
-			if (_Header->m_ServerHash != ServerHash)
+			if (PH.m_ServerHash != ServerHash)
 				throw std::exception("Wrong server in response. (Server-sided bug?)");
+
+			// No data recv
+			if (!PH.m_SizeParam)
+				return;
 
 			for (int i = 0; i < PH.m_SizeParam; i++)
 			{
-				UpdateEntityPacket_t* UpdatePacket = (UpdateEntityPacket_t*)(Buffer + sizeof(PacketHeader_t) + sizeof(UpdateEntityPacket_t) * i);
+				UpdateEntityPacket_t UpdatePacket;
+				try
+				{
+					iarchive >> UpdatePacket;
 
-				if (UpdatePacket->m_Index < 0 || UpdatePacket->m_Index > 64)
-					throw std::exception("Wrong user index in response. (Server-sided bug?)");
+					if (UpdatePacket.m_Index < 0 || UpdatePacket.m_Index > 64)
+						throw std::exception("Wrong server in response. (Server-sided bug?)");
 
-				PlayerData pd;
-				GetLastRecord(UpdatePacket->m_Index, pd);
+					PlayerData pd;
+					GetLastRecord(i, pd);
 					
-				// We already have more recent info, ignore
-				if (pd.m_SimulationTime >= UpdatePacket->m_SimulationTime)
-					continue;
+					// We already have more recent info, ignore
+					if (pd.m_SimulationTime >= UpdatePacket.m_SimulationTime)
+						continue;
 
-				// Write new data to memory
-				SetLastRecord(UpdatePacket->m_Index, UpdatePacket->m_Crouching, UpdatePacket->m_SimulationTime, Vector(UpdatePacket->m_Position[0], UpdatePacket->m_Position[1], UpdatePacket->m_Position[2]));
+					// Write new data to memory
+					SetLastRecord(UpdatePacket.m_Index, UpdatePacket.m_Crouching, UpdatePacket.m_SimulationTime, Vector(UpdatePacket.m_Position[0], UpdatePacket.m_Position[1], UpdatePacket.m_Position[2]));
+				}
+				catch (...)
+				{
+					std::cerr << "Server: Error inside " << __func__ << "!" << std::endl;
+				}
 			}
 		}
 		catch (std::exception& e)
